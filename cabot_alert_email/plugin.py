@@ -61,7 +61,7 @@ class EmailAlertPlugin(AlertPlugin):
             if service.overall_status == service.CRITICAL_STATUS:
                 emails += [u.email for u in users if u.email]
             subject = '[Cabot][%s] 服务状态变为：%s' % (
-                service.overall_status, service.name)
+                service.name, service.overall_status)
         else:
             subject = '[Cabot][%s] 服务状态变为：正常' % (service.name,)
         t = Template(email_template)
