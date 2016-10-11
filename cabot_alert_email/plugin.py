@@ -1,24 +1,39 @@
+# -*- coding:UTF-8 -*-
 from os import environ as env
 
 from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMultiAlternatives
 from django.core.urlresolvers import reverse
-from django.template import Context, Template
+from django.template import Context, Template, loader
 
 from cabot.plugins.models import AlertPlugin
 
 import requests
 import logging
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
 
-email_template = """Service {{ service.name }} {{ scheme }}://{{ host }}{% url 'service' pk=service.id %} {% if service.overall_status != service.PASSING_STATUS %}alerting with status: {{ service.overall_status }}{% else %}is back to normal{% endif %}.
+email_template = """<html><head><style type='text/css'>table{border-collapse:collapse;}th{empty-cells:show;border:1px solid black ;background-color:green;color:white;font-size:13px;}</style>
+</head>Service {{ service.name }} {{ scheme }}://{{ host }}{% url 'service' pk=service.id %} {% if service.overall_status != service.PASSING_STATUS %}alerting with status: {{ service.overall_status }}{% else %}is back to normal{% endif %}.
+<br/>
+<p>
+<strong>校验结果列表</strong>
+<br/>
+<table border='1px'>
+<tr><th>检查结果</th><th>检查名称</th><th>类型</th><th>重要性</th><th>频率</th><th>防抖数量</th><th>实际值</th></tr>
 {% if service.overall_status != service.PASSING_STATUS %}
-CHECKS FAILING:{% for check in service.all_failing_checks %}
-  FAILING - {{ check.name }} - Type: {{ check.check_category }} - Importance: {{ check.get_importance_display }}{% endfor %}
+{% for check in service.all_failing_checks %}
+<tr><td><font color="red">FAILING</font></td><td>{{ check.name }}</td><td>{{ check.check_category }}</td><td>{{ check.get_importance_display }}</td><td>{{ check.frequency }}分钟</td><td>{{ check.debounce }}</td><td>{% autoescape off %}{{ check.error|default:"" }}{% endautoescape %}</td></tr>
+{% endfor %}
 {% if service.all_passing_checks %}
-Passing checks:{% for check in service.all_passing_checks %}
-  PASSING - {{ check.name }} - Type: {{ check.check_category }} - Importance: {{ check.get_importance_display }}{% endfor %}
+{% for check in service.all_passing_checks %}
+<tr><td><font color="green">PASSING</font></td><td>{{ check.name }}</td><td>{{ check.check_category }}</td><td>{{ check.get_importance_display }}</td><td>{{ check.frequency }}分钟</td><td>{{ check.debounce }}</td><td>{% autoescape off %}{{ check.error|default:"" }}{% endautoescape %}</td></tr>
+{% endfor %}
 {% endif %}
 {% endif %}
+</table>
+</html>
 """
 
 class EmailAlertPlugin(AlertPlugin):
@@ -45,15 +60,21 @@ class EmailAlertPlugin(AlertPlugin):
         if service.overall_status != service.PASSING_STATUS:
             if service.overall_status == service.CRITICAL_STATUS:
                 emails += [u.email for u in users if u.email]
-            subject = '%s status for service: %s' % (
+            subject = '[Cabot][%s] 服务状态变为：%s' % (
                 service.overall_status, service.name)
         else:
-            subject = 'Service back to normal: %s' % (service.name,)
+            subject = '[Cabot][%s] 服务状态变为：正常' % (service.name,)
         t = Template(email_template)
+        html_content = t.render(c)
+        msg = EmailMultiAlternatives(subject, html_content, 'Cabot <%s>' % env.get('CABOT_FROM_EMAIL'), emails)
+        msg.attach_alternative(html_content, "text/html")
+        msg.send()
+        """
         send_mail(
             subject=subject,
             message=t.render(c),
             from_email='Cabot <%s>' % env.get('CABOT_FROM_EMAIL'),
             recipient_list=emails,
         )
+        """
 
