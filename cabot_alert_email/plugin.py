@@ -17,6 +17,7 @@ sys.setdefaultencoding('utf-8')
 email_template = """<html><head><style type='text/css'>table{border-collapse:collapse;}th{empty-cells:show;border:1px solid black ;background-color:green;color:white;font-size:13px;}</style>
 </head>Service {{ service.name }} {{ scheme }}://{{ host }}{% url 'service' pk=service.id %} {% if service.overall_status != service.PASSING_STATUS %}alerting with status: {{ service.overall_status }}{% else %}is back to normal{% endif %}.
 <br/>
+{% if service.overall_status != service.PASSING_STATUS %}
 <p>
 <strong>校验结果列表</strong>
 <br/>
@@ -30,6 +31,7 @@ email_template = """<html><head><style type='text/css'>table{border-collapse:col
 {% for check in service.all_passing_checks %}
 <tr><td><font color="green">PASSING</font></td><td>{{ check.name }}</td><td>{{ check.check_category }}</td><td>{{ check.get_importance_display }}</td><td>{{ check.frequency }}分钟</td><td>{{ check.debounce }}</td><td>{% autoescape off %}{{ check.error|default:"" }}{% endautoescape %}</td></tr>
 {% endfor %}
+{% endif %}
 {% endif %}
 {% endif %}
 </table>
