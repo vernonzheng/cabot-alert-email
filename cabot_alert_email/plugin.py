@@ -64,10 +64,10 @@ class EmailAlertPlugin(AlertPlugin):
         if service.overall_status != service.PASSING_STATUS:
             if service.overall_status == service.CRITICAL_STATUS:
                 emails += [u.email for u in users if u.email]
-            subject = '[Cabot][%s] 服务状态变为：%s, check失败数：%s' % (
+            subject = '[%s]状态变为:%s,失败数:%s' % (
                 service.name, service.overall_status, fail_count)
         else:
-            subject = '[Cabot][%s] 服务状态变为：正常' % (service.name,)
+            subject = '[%s]状态变为:正常' % (service.name,)
         t = Template(email_template)
         html_content = t.render(c)
         msg = EmailMultiAlternatives(subject, html_content, 'Cabot <%s>' % env.get('CABOT_FROM_EMAIL'), emails)
