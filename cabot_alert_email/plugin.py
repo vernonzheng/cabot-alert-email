@@ -54,7 +54,7 @@ class EmailAlertPlugin(AlertPlugin):
         emails = [u.email for u in users if u.email]
         if not emails:
             return
-        fail_count = len(service.all_failing_checks)
+        fail_count = service.all_failing_checks().count()
         c = Context({
             'service': service,
             'host': settings.WWW_HTTP_HOST,
